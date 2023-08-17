@@ -2,11 +2,12 @@
 Auto installer for  installing node for MateableCoin
 
 With this script it will download everything with one click  
-once you install it on your server 
+I will have it where you can run a wallet too but you will have manually set that up 
 
-make file as executable:
-chmod +x filename.sh
-
+1. 
+Make file as executable:
+chmod +x install-full-node.sh
+2.
 Then run ./install-full-node.sh 
 
 
