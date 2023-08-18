@@ -35,7 +35,7 @@
 # directory after the installation is shown below:
 #
 # Source files:
-#   $HOME/mateable-core/mateable/
+#   $HOME/mateable-core/mateablecoin-24.x/
 #
 # Binaries:
 #   $HOME/mateable-core/bin/
@@ -47,7 +47,7 @@
 #   $HOME/mateable-core/.mateable/blocks
 #   /home/$USER/mateable-core/.mateable/chainstate
 #
-# Need help? Contact ayeowch+bitnodes.io@gmail.com
+#
 #
 ###############################################################################
 
