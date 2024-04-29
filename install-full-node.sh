@@ -62,12 +62,13 @@ PORT=6969
 BUILD=0
 UNINSTALL=0
 
-PURPLE='\033[0;35m'
-BLUE='\033[94m'
-GREEN='\033[32;1m'
-YELLOW='\033[33;1m'
-RED='\033[91;1m'
-RESET='\033[0m'
+# Define colors using tput
+PURPLE=$(tput setaf 5)
+BLUE=$(tput setaf 4)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+RED=$(tput setaf 1)
+RESET=$(tput sgr0)
 
 ARCH=$(uname -m)
 SYSTEM=$(uname -s)
