@@ -22,6 +22,8 @@
 #
 ###############################################################################
 
+INSTALLER_VERSION="1.0.0"
+
 REPO="mateable/mateablecoin-24.x"
 VERSION="latest"
 TARGET_DIR="$HOME/mateable-core"
@@ -56,6 +58,8 @@ RESET=$(tput sgr0 2>/dev/null)
 
 usage() {
     cat <<EOF
+install-full-node.sh v$INSTALLER_VERSION
+
 Usage: $0 [-h] [-v <version>] [-t <target_directory>] [-p <port>] [-w] [-l] [-a <type>] [-k] [-b] [-c] [-s] [-d] [-e] [-n <webhook_url>] [-y] [-u]
   -h                  Print usage.
   -v <version>        MateableCoin Core version to install. Default: latest release.
@@ -797,6 +801,7 @@ show_status() {
     fi
 
     print_banner
+    print_info "Installer:    v$INSTALLER_VERSION"
     print_info "Version:      $(installed_version)"
 
     if program_exists systemctl; then
