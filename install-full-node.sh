@@ -817,15 +817,30 @@ show_status() {
     info=$($cli getblockchaininfo 2>/dev/null)
     conns=$($cli getconnectioncount 2>/dev/null)
     local_blocks=""
+
+    # Fetched up front so the sync percentage below can use the real
+    # network tip as its target instead of locally-known headers, which
+    # climb gradually during header sync and made "X / Y blocks" compare
+    # against a moving, incomplete Y (e.g. "0 / 1522000 (0.0%)" while
+    # actually still hundreds of thousands of headers away from the real
+    # tip) -- this is the same ground-truth check we kept having to do by
+    # hand to tell "genuinely stuck" apart from "still catching up."
+    network_tip=$(fetch_stdout "https://explorer.mateable.com/api/getblockcount" 2>/dev/null)
+    case "$network_tip" in
+        ''|*[!0-9]*) network_tip="" ;;
+    esac
+
     if [ -n "$info" ] && program_exists python3; then
-        local_blocks=$(echo "$info" | python3 -c "
-import json, sys
+        local_blocks=$(echo "$info" | NETWORK_TIP="$network_tip" python3 -c "
+import json, os, sys
 d = json.load(sys.stdin, strict=False)
 blocks = d.get('blocks', 0)
 headers = d.get('headers', 0)
-pct = (blocks / headers * 100) if headers else 0
+tip_env = os.environ.get('NETWORK_TIP', '')
+target = int(tip_env) if tip_env.isdigit() and int(tip_env) > 0 else headers
+pct = (blocks / target * 100) if target else 0
 ibd = d.get('initialblockdownload', True)
-print('Sync:         %s / %s blocks (%.1f%%)%s' % (blocks, headers, pct, '' if not ibd else '  [still catching up]'))
+print('Sync:         %s / %s blocks (%.1f%%)%s' % (blocks, target, pct, '' if not ibd else '  [still catching up]'))
 print(blocks)
 " 2>/dev/null)
         echo "$local_blocks" | head -1
@@ -838,22 +853,13 @@ print(blocks)
     wallet_addr=$(get_wallet_address)
     [ -n "$wallet_addr" ] && print_info "Wallet:       $wallet_addr"
 
-    # Compare against the live public explorer -- this is the actual
-    # ground-truth check we kept having to do by hand tonight to tell
-    # "genuinely stuck" apart from "still catching up."
-    if [ -n "$local_blocks" ]; then
-        network_tip=$(fetch_stdout "https://explorer.mateable.com/api/getblockcount" 2>/dev/null)
-        case "$network_tip" in
-            ''|*[!0-9]*) ;;
-            *)
-                behind=$((network_tip - local_blocks))
-                if [ "$behind" -le 2 ]; then
-                    print_success "Network tip:  $network_tip (you're caught up)"
-                else
-                    print_warning "Network tip:  $network_tip ($behind blocks behind)"
-                fi
-                ;;
-        esac
+    if [ -n "$local_blocks" ] && [ -n "$network_tip" ]; then
+        behind=$((network_tip - local_blocks))
+        if [ "$behind" -le 2 ]; then
+            print_success "Network tip:  $network_tip (you're caught up)"
+        else
+            print_warning "Network tip:  $network_tip ($behind blocks behind)"
+        fi
     fi
 
     if [ -d "$TARGET_DIR/.mateable" ]; then
