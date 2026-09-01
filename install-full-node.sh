@@ -5,7 +5,7 @@
 # Install script for a MateableCoin full node based on MateableCoin Core.
 #
 # Usage:
-#   curl -fsSL https://coin.mateable.com/install-full-node.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/mateable/node_installer/node_installer/install-full-node.sh | sh
 #
 # By default this installs the official prebuilt MateableCoin Core binary
 # for your platform (verified against the SHA-256 digest published with the

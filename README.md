@@ -25,7 +25,7 @@ reboots, tunes itself to your machine, and gets out of your way.
 ## 🚀 Quick start
 
 ```
-curl -fsSL https://coin.mateable.com/install-full-node.sh | sh
+curl -fsSL https://raw.githubusercontent.com/mateable/node_installer/node_installer/install-full-node.sh | sh
 ```
 
 No flags needed. Answer a couple of yes/no questions (or just press Enter for the defaults)
