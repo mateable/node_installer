@@ -1,30 +1,50 @@
-# MateableCoin Node Installer
+<h1 align="center">
+MateableCoin Node Installer
+<br/><br/>
+<img src="https://64.media.tumblr.com/230b42ccd0bbc026d5b1258bb8a8f92c/4fe9f521c4196e49-e7/s540x810/4e419bef2010b24459e969c46eaa4b9e20e710fd.pnj" alt="mateablecoin" width="220"/>
+</h1>
 
-One command to run a full [MateableCoin](https://coin.mateable.com) node. Downloads the official
-release binary (checksum-verified), installs it as a real systemd service that survives
-crashes and reboots, and gets out of your way.
+<div align="center">
+
+**One command. A real, running MateableCoin node.**
+
+[![mateablecoinBadge](https://img.shields.io/badge/Mateable-coin-blueviolet.svg)](https://coin.mateable.com)
+[![Latest release](https://img.shields.io/github/v/release/mateable/node_installer?label=release&color=blueviolet)](https://github.com/mateable/node_installer/releases/latest)
+[![Shell](https://img.shields.io/badge/shell-POSIX%20sh-blueviolet.svg)](install-full-node.sh)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blueviolet.svg)](#-requirements)
+[![Install](https://img.shields.io/badge/install-curl%20%7C%20sh-blueviolet.svg)](#-quick-start)
+
+</div>
+
+---
+
+Downloads the official [MateableCoin](https://coin.mateable.com) Core release binary
+(checksum-verified), installs it as a real **systemd service** that survives crashes and
+reboots, tunes itself to your machine, and gets out of your way.
+
+## 🚀 Quick start
 
 ```
 curl -fsSL https://coin.mateable.com/install-full-node.sh | sh
 ```
 
 No flags needed. Answer a couple of yes/no questions (or just press Enter for the defaults)
-and you're running a node — no wallet, no funds at risk, nothing to manage.
+and you're running a node.
 
-## What it does
+> **No wallet, no funds at risk, nothing to manage** — unless you ask for one.
 
-- Installs the latest official MateableCoin Core release for your platform, verified against
-  the SHA-256 checksum published with the release. Falls back to building from source if no
-  prebuilt binary is available.
-- Runs it as a systemd service (`mateabled`) that restarts automatically on crash or reboot.
-- Sizes the block cache to your machine's actual RAM instead of using a fixed default.
-- Enables UPnP and opens your local firewall (ufw/firewalld) so your node is actually
-  reachable from the network, not just running invisibly.
-- Adds a couple of known-stable nodes as fallback peers, so you connect quickly even if DNS
-  seeding is having a bad day.
-- Optionally sets up a wallet, staking, log rotation, and failure alerts — all opt-in.
+## ✨ What it does
 
-## Quick examples
+| | |
+|---|---|
+| 📦 | Installs the latest official Core release for your platform, **SHA-256 verified** against the checksum published with the release. Falls back to building from source if no prebuilt binary exists. |
+| 🛡️ | Runs it as a systemd service (`mateabled`) that **restarts automatically** on crash or reboot, with crash-loop protection. |
+| 🧠 | Sizes the block cache to your machine's **actual RAM** instead of a fixed default. |
+| 🌐 | Enables UPnP and opens your **local firewall** (ufw/firewalld) so your node is actually reachable, not just running invisibly. |
+| 🤝 | Adds known-stable fallback peers, so you connect fast even if DNS seeding is having a bad day. |
+| 💼 | Optional wallet, staking, log rotation, and failure alerts — all **opt-in**. |
+
+## 🧪 Quick examples
 
 | I want to... | Command |
 |---|---|
@@ -37,7 +57,7 @@ and you're running a node — no wallet, no funds at risk, nothing to manage.
 | Back up my wallet | `./install-full-node.sh -e` |
 | Remove everything | `./install-full-node.sh -u` |
 
-## Wallet & staking
+## 💰 Wallet & staking
 
 Pass `-w` to enable a wallet. By default it creates a modern **descriptor wallet** with native
 SegWit (bech32) addresses — the current best-practice default. You'll get a real receiving
@@ -51,22 +71,22 @@ Options:
   `bech32m` (Taproot)
 - `-k` — enable staking once the wallet is set up
 
-**On staking and encryption:** MateableCoin Core has no "stake-only" unlock mode — an unlocked
-wallet can also spend. An *unencrypted* wallet stakes immediately with no extra steps. If you
-encrypt your wallet, staking pauses until you run `walletpassphrase` to unlock it (you'll need
-to do this periodically, e.g. via cron, to keep staking active). The installer explains this
-tradeoff and lets you choose.
+> **On staking and encryption:** MateableCoin Core has no "stake-only" unlock mode — an
+> unlocked wallet can also spend. An *unencrypted* wallet stakes immediately with no extra
+> steps. If you encrypt your wallet, staking pauses until you run `walletpassphrase` to unlock
+> it (you'll need to do this periodically, e.g. via cron, to keep staking active). The
+> installer explains this tradeoff and lets you choose.
 
-## Checking on your node
+## 📊 Checking on your node
 
 `-s` prints a one-time status summary: version, service state, sync progress, peer count,
 how far behind the live network tip you are, disk usage broken down by component, and whether
 your node is actually reachable from the internet.
 
-`-d` shows the same thing as a live dashboard that refreshes in place every few seconds —
+`-d` shows the same thing as a **live dashboard** that refreshes in place every few seconds —
 Ctrl+C to exit.
 
-## Updating
+## 🔄 Updating
 
 ```
 ./install-full-node.sh -c
@@ -77,7 +97,7 @@ Your blockchain data is never touched — no reindex needed. Pass `-y` to skip t
 prompt, or `-v <version>` to update to (or pin) a specific version instead of always jumping to
 latest.
 
-## Failure notifications
+## 🔔 Failure notifications
 
 ```
 ./install-full-node.sh -n https://your-webhook-url
@@ -87,7 +107,7 @@ If the node crash-loops and systemd gives up restarting it, this POSTs a JSON al
 webhook (Discord/Slack-compatible payload) so you find out immediately instead of discovering
 a dead node by accident.
 
-## All options
+## ⚙️ All options
 
 ```
 $ ./install-full-node.sh -h
@@ -121,13 +141,13 @@ Usage: install-full-node.sh [-h] [-v <version>] [-t <target_directory>] [-p <por
   -u                  Uninstall MateableCoin Core (stops and removes the systemd service).
 ```
 
-## Requirements
+## 📋 Requirements
 
 - Linux (systemd) or macOS
 - `curl` or `wget`, `python3` (used to parse release metadata — most systems already have this)
 - `sudo` access if not running as root, for installing the systemd service
 
-## Security notes
+## 🔒 Security notes
 
 - The prebuilt binary's SHA-256 checksum is verified against the one published with the
   GitHub release before it's installed — a mismatch aborts the install.
@@ -135,3 +155,11 @@ Usage: install-full-node.sh [-h] [-v <version>] [-t <target_directory>] [-p <por
   hardcoded credentials).
 - Wallet functionality is entirely opt-in. Without `-w`, no wallet is created and there is
   nothing on the node that could hold funds.
+
+---
+
+<div align="center">
+
+Part of the [MateableCoin](https://coin.mateable.com) project · [Block Explorer](https://explorer.mateable.com) · [Network Nodes](https://explorer.mateable.com/nodes)
+
+</div>

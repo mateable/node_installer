@@ -123,6 +123,20 @@ spin_tick() {
     char=$(printf '%s' "$SPIN_CHARS" | cut -c$((SPIN_POS + 1)))
     printf "\r%s %s%s " "$BLUE" "$char" "$RESET"
 }
+spin_wait() {
+    # Advances the spinner once per second for $1 total seconds, instead
+    # of once per (much slower) poll interval -- ticking the spinner at
+    # the same cadence as a 4s or 2s network poll made it look like it
+    # was barely moving. Uses whole-second sleeps rather than fractional
+    # ones for portability across sleep(1) implementations.
+    secs="$1"
+    j=0
+    while [ "$j" -lt "$secs" ]; do
+        spin_tick
+        sleep 1
+        j=$((j + 1))
+    done
+}
 spin_clear() {
     # Avoid printf's "%*s" dynamic-width form -- not reliably portable
     # across printf implementations (dash builtin, busybox, etc.).
@@ -529,9 +543,8 @@ wait_for_rpc() {
             spin_clear
             return 0
         fi
-        spin_tick
+        spin_wait 2
         i=$((i + 1))
-        sleep 2
     done
     spin_clear
     return 1
@@ -762,9 +775,8 @@ except Exception:
 " 2>/dev/null)
         fi
         [ -n "$reachable" ] && break
-        spin_tick
+        spin_wait 4
         i=$((i + 1))
-        sleep 4
     done
     spin_clear
 
@@ -830,8 +842,23 @@ show_status() {
         ''|*[!0-9]*) network_tip="" ;;
     esac
 
+    # Block download and header sync are two independent progress axes
+    # that both write to debug.log concurrently -- showing whichever one
+    # RPC/logs happened to have on hand at each check meant the
+    # percentage could jump from, say, 0.5% (real block progress) to
+    # 84% (header sync, an unrelated number) and back on alternating
+    # refreshes. That's confusing regardless of whether each individual
+    # number is technically accurate. Fix: once real block-sync data has
+    # been seen even once, cache it and always show that axis --
+    # falling back to the *last known* block count (not headers, not raw
+    # log text) whenever RPC times out, so the number only ever moves
+    # forward. Headers-based progress is only ever shown before any real
+    # block-sync data exists yet.
+    sync_cache="$TARGET_DIR/.mateable/.node_installer_sync_cache"
+
+    rpc_ok=0
     if [ -n "$info" ] && program_exists python3; then
-        local_blocks=$(echo "$info" | NETWORK_TIP="$network_tip" python3 -c "
+        result=$(echo "$info" | NETWORK_TIP="$network_tip" python3 -c "
 import json, os, sys
 d = json.load(sys.stdin, strict=False)
 blocks = d.get('blocks', 0)
@@ -840,21 +867,61 @@ tip_env = os.environ.get('NETWORK_TIP', '')
 target = int(tip_env) if tip_env.isdigit() and int(tip_env) > 0 else headers
 pct = (blocks / target * 100) if target else 0
 ibd = d.get('initialblockdownload', True)
-print('Sync:         %s / %s blocks (%.1f%%)%s' % (blocks, target, pct, '' if not ibd else '  [still catching up]'))
 print(blocks)
+print(target)
+print('%s / %s blocks (%.1f%%)%s' % (blocks, target, pct, '' if not ibd else '  [still catching up]'))
 " 2>/dev/null)
-        echo "$local_blocks" | head -1
-        local_blocks=$(echo "$local_blocks" | tail -1)
+        if [ -n "$result" ]; then
+            rpc_ok=1
+            local_blocks=$(echo "$result" | sed -n '1p')
+            sync_target=$(echo "$result" | sed -n '2p')
+            sync_line=$(echo "$result" | sed -n '3p')
+            # Cache on every successful RPC call, even a 0-block reading
+            # during header sync -- this is what lets "Network tip" keep
+            # showing (using the last known block count) on a round where
+            # RPC times out, instead of disappearing entirely just because
+            # this one check didn't get a live answer.
+            echo "$local_blocks $sync_target" > "$sync_cache" 2>/dev/null
+        fi
+    fi
+
+    cached_blocks=""
+    cached_target=""
+    if [ -f "$sync_cache" ]; then
+        cached_blocks=$(cut -d' ' -f1 "$sync_cache" 2>/dev/null)
+        cached_target=$(cut -d' ' -f2 "$sync_cache" 2>/dev/null)
+    fi
+
+    if [ "$rpc_ok" = "1" ] && [ "${local_blocks:-0}" != "0" ]; then
+        print_info "Sync:         $sync_line"
+    elif [ -n "$cached_blocks" ] && [ "$cached_blocks" != "0" ] && [ -n "$cached_target" ]; then
+        # Only used as the Sync line's fallback once real (nonzero) block
+        # progress has actually been cached -- a 0-block cache entry
+        # would otherwise look identical to the boring "0.0%" case this
+        # was built to avoid, so that still falls through to the header
+        # sync detail below instead.
+        cached_pct=$(awk -v b="$cached_blocks" -v t="$cached_target" 'BEGIN { printf "%.1f", (b / t * 100) }')
+        print_warning "Sync:         ~$cached_blocks / $cached_target blocks (~$cached_pct%) -- RPC busy, last known progress"
     else
-        print_warning "Sync:         node not responding to RPC yet"
+        header_line=""
+        if [ -f "$TARGET_DIR/.mateable/debug.log" ]; then
+            header_line=$(grep "Synchronizing blockheaders" "$TARGET_DIR/.mateable/debug.log" 2>/dev/null | tail -1 | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z //')
+        fi
+        if [ -n "$header_line" ]; then
+            print_warning "Sync:         still building the chainwork index ($header_line)"
+        else
+            print_warning "Sync:         node busy -- still syncing, check back shortly"
+        fi
     fi
     [ -n "$conns" ] && print_info "Peers:        $conns"
 
     wallet_addr=$(get_wallet_address)
     [ -n "$wallet_addr" ] && print_info "Wallet:       $wallet_addr"
 
-    if [ -n "$local_blocks" ] && [ -n "$network_tip" ]; then
-        behind=$((network_tip - local_blocks))
+    blocks_for_tip="$local_blocks"
+    [ -z "$blocks_for_tip" ] && blocks_for_tip="$cached_blocks"
+    if [ -n "$blocks_for_tip" ] && [ -n "$network_tip" ]; then
+        behind=$((network_tip - blocks_for_tip))
         if [ "$behind" -le 2 ]; then
             print_success "Network tip:  $network_tip (you're caught up)"
         else
